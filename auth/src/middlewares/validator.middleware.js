@@ -114,11 +114,48 @@ const loginValidation = [
     next();
   }
 ];
+const addUserAddressValidation = [
+  body("street")
+    .trim()
+    .notEmpty()
+    .withMessage("Street is required")
+    .isLength({ min: 3 })
+    .withMessage("Street must be at least 3 characters"),
+
+  body("city")
+    .trim()
+    .notEmpty()
+    .withMessage("City is required")
+    .isAlpha("en-IN", { ignore: " " })
+    .withMessage("City must contain only letters"),
+
+  body("state")
+    .trim()
+    .notEmpty()
+    .withMessage("State is required")
+    .isAlpha("en-IN", { ignore: " " })
+    .withMessage("State must contain only letters"),
+
+  body("zipcode")
+    .trim()
+    .notEmpty()
+    .withMessage("Zipcode is required")
+    .isPostalCode("IN")
+    .withMessage("Invalid Indian zipcode"),
+
+  body("country")
+    .trim()
+    .notEmpty()
+    .withMessage("Country is required")
+    .isAlpha("en-IN", { ignore: " " })
+    .withMessage("Country must contain only letters"),
+];
 
 
 module.exports = { 
     registerUserValidation,
-    loginValidation
+    loginValidation,
+    addUserAddressValidation,
 }
 
 

@@ -158,14 +158,64 @@ const logoutController = async (req, res) => {
   }
 };
 
+const getAddress = async (req, res) => {
+  const id = req.user.id;
 
+  const user = await userModel
+    .findById(id)
+    .select("address");
 
+  if (!user) {
+    return res.status(404).json({
+      message: "User not found",
+    });
+  }
 
+  return res.status(200).json({
+    message: "Address found",
+    address: user.address, // ✅ REQUIRED
+  });
+};
+
+const addAddress = async (req, res) => {
+  const user = await userModel.findById(req.user.id);
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  user.address = req.body;
+  await user.save();
+
+  res.status(200).json({
+    message: "Address saved",
+    address: user.address,
+  });
+};
+
+const deleteAddress = async (req, res) => {
+  const user = await userModel.findById(req.user.id);
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  user.address = undefined;
+  await user.save();
+
+  res.status(200).json({
+    message: "Address deleted",
+  });
+};
 
 
 module.exports = {
   registerController,
   loginController,
   meController,
-  logoutController
+  logoutController,
+  getAddress,
+  addAddress,
+  deleteAddress
+
 };
