@@ -95,7 +95,31 @@ const registerUserValidation = [
     next();
   }
 ];
+const loginValidation = [
+  body("email")
+    .notEmpty().withMessage("Email is required")
+    .isEmail().withMessage("Invalid email"),
+
+  body("password")
+    .notEmpty().withMessage("Password is required"),
+
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).json({
+        message: "Validation failed",
+        errors: errors.array(),
+      });
+    }
+    next();
+  }
+];
+
 
 module.exports = { 
     registerUserValidation,
+    loginValidation
 }
+
+
+
