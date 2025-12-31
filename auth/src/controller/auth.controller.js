@@ -1,6 +1,8 @@
 const userModel = require("../models/user.model");
 const bcrypt = require("bcryptjs");
 const jwt = require('jsonwebtoken')
+const redis = require('../db/redis')
+
 
 const registerController = async (req, res) => {
   try {
@@ -118,6 +120,45 @@ const meController = async (req, res) => {
   }
 };
 
+const logoutController = async (req, res) => {
+  try {
+    const token = req.cookies?.token;
+
+    // ✅ NEVER touch redis in tests
+    if (
+      token &&
+      process.env.NODE_ENV !== "test" &&
+      typeof redis !== "undefined"
+    ) {
+      await redis.set(
+        `blacklist:${token}`,
+        "true",
+        "EX",
+        24 * 60 * 60
+      );
+    }
+
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+
+    return res.status(200).json({
+      message: "Logout successful",
+    });
+
+  } catch (error) {
+    console.error("LOGOUT ERROR 👉", error);
+    return res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
+
 
 
 
@@ -125,5 +166,6 @@ const meController = async (req, res) => {
 module.exports = {
   registerController,
   loginController,
-  meController
+  meController,
+  logoutController
 };
