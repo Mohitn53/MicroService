@@ -2,7 +2,7 @@ const router = require("express").Router();
 const multer = require("multer");
 
 const createAuthMiddleware = require("../middlewares/auth.middleware");
-const { createProduct, getProducts } = require("../controllers/product.controller");
+const { createProduct, getProducts , getProductById } = require("../controllers/product.controller");
 const { createProductValidation } = require("../validators/product.validator");
 const validateRequest = require("../middlewares/validate.middleware");
 
@@ -19,5 +19,7 @@ router.post(
 
 
 router.get('/',getProducts)
+router.get("/:id", getProductById);
+
 
 module.exports = router;
