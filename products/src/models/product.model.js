@@ -15,16 +15,17 @@ const productSchema = new mongoose.Schema({
             enum:["USD","INR"],
             default:"INR"
         },
-        seller:{
+    },
+    seller:{
             type:mongoose.Schema.Types.ObjectId,
             required:true
         },
-        images:[{
+    images:[{
             url:String,
             thumbnail:String,
             id:String
         }]
-    }
+    
 })
 const productModel = mongoose.model("product",productSchema)
 module.exports = productModel

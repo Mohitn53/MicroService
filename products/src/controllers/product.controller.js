@@ -1,35 +1,29 @@
 const productModel = require("../models/product.model");
-const uploadImageToImageKit = require("../services/imagekit.service");
 
 const createProduct = async (req, res) => {
   try {
-    const { title, description, price } = req.body;
-
-    // Upload images to ImageKit
-    let images = [];
-    if (req.files && req.files.length > 0) {
-      images = await Promise.all(
-        req.files.map((file) =>
-          uploadImageToImageKit(file.buffer, file.originalname)
-        )
-      );
-    }
+    const { title, desc, price } = req.body;
+    const images = (req.files || []).map((file) => ({
+      url: file.path || "",
+      thumbnail: "",
+      id: file.filename || "",
+    }));
 
     const product = await productModel.create({
       title,
-      description,
+      desc,
       price,
-      seller: req.user.id,
+      seller: req.user.id, // from JWT
       images,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Product created successfully",
       product,
     });
   } catch (error) {
     console.error("CREATE PRODUCT ERROR 👉", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
       error: error.message,
     });
