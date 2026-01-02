@@ -1,13 +1,11 @@
-// Minimal multer mock that emulates middleware behaviour
 const multer = () => {
-  return (req, res, next) => {
-    // simulate file being attached
-    req.file = req.file || { originalname: 'test.jpg', buffer: Buffer.from('') }
-    next()
-  }
-}
+  return {
+    array: () => (req, res, next) => {
+      req.files = []; // simulate no uploaded files
+      next();
+    },
+  };
+};
 
-// support .single(), .array(), etc.
-multer.single = () => multer()
-multer.array = () => multer()
-module.exports = multer
+multer.memoryStorage = jest.fn();
+module.exports = multer;

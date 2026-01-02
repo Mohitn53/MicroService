@@ -1,10 +1,11 @@
-// Minimal ImageKit mock
-module.exports = {
-  upload: jest.fn((fileBuffer, options, callback) => {
-    // simulate async upload result
-    const result = { fileId: 'mock-file-id', url: 'https://imagekit.io/mock/test.jpg' }
-    if (callback && typeof callback === 'function') return callback(null, result)
-    return Promise.resolve(result)
-  }),
-  config: jest.fn()
-}
+module.exports = function ImageKit() {
+  return {
+    upload: jest.fn().mockResolvedValue({
+      url: "https://fake.imagekit.io/product.jpg",
+      fileId: "fake-file-id",
+    }),
+    url: jest.fn().mockReturnValue(
+      "https://fake.imagekit.io/product_thumb.jpg"
+    ),
+  };
+};

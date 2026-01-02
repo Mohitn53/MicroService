@@ -1,5 +1,7 @@
 const { body } = require("express-validator");
 
+
+
 const createProductValidation = [
   body("title")
     .notEmpty()
@@ -13,6 +15,7 @@ const createProductValidation = [
     .optional()
     .isIn(["USD", "INR"])
     .withMessage("Invalid currency"),
+
 ];
 
 module.exports = { createProductValidation };
