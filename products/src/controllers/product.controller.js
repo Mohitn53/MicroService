@@ -29,5 +29,69 @@ const createProduct = async (req, res) => {
     });
   }
 };
+const getProducts = async (req, res) => {
+  try {
+    let {
+      q,
+      minPrice,
+      maxPrice,
+      skip = 0,
+      limit = 20,
+    } = req.query;
 
-module.exports = { createProduct };
+    skip = Number(skip);
+    limit = Number(limit);
+
+    const filter = {};
+
+    /* ----------------------------- SEARCH ----------------------------- */
+    if (q) {
+      filter.$or = [
+        { title: { $regex: q, $options: "i" } },
+        { desc: { $regex: q, $options: "i" } },
+      ];
+    }
+
+    /* ----------------------------- PRICE FILTER ----------------------------- */
+    if (minPrice || maxPrice) {
+      filter["price.amount"] = {};
+
+      if (minPrice) {
+        filter["price.amount"].$gte = Number(minPrice);
+      }
+
+      if (maxPrice) {
+        filter["price.amount"].$lte = Number(maxPrice);
+      }
+    }
+
+    /* ----------------------------- QUERY DB ----------------------------- */
+    const products = await productModel
+      .find(filter)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const total = await productModel.countDocuments(filter);
+
+    return res.status(200).json({
+      message: "Products fetched successfully",
+      total,
+      count: products.length,
+      products,
+    });
+  } catch (error) {
+    console.error("GET PRODUCTS ERROR 👉", error);
+    return res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = { 
+    createProduct,
+    getProducts,
+ };
+
+
