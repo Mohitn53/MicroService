@@ -120,14 +120,133 @@ const getProductById = async (req, res) => {
     });
   }
 };
+const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid product id",
+      });
+    }
+
+    const product = await productModel.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found",
+      });
+    }
+
+    // 🔐 ownership check
+    if (product.seller.toString() !== req.user.id) {
+      return res.status(403).json({
+        message: "Forbidden",
+      });
+    }
+
+    const allowedUpdates = ["title", "desc", "price"];
+    allowedUpdates.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        product[field] = req.body[field];
+      }
+    });
+
+    await product.save();
+
+    res.status(200).json({
+      message: "Product updated successfully",
+      product,
+    });
+  } catch (error) {
+    console.error("UPDATE PRODUCT ERROR 👉", error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid product id",
+      });
+    }
+
+    const product = await productModel.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found",
+      });
+    }
+
+    // 🔐 ownership check
+    if (product.seller.toString() !== req.user.id) {
+      return res.status(403).json({
+        message: "Forbidden",
+      });
+    }
+
+    await product.deleteOne();
+
+    return res.status(200).json({
+      message: "Product deleted successfully",
+    });
+  } catch (error) {
+    console.error("DELETE PRODUCT ERROR 👉", error);
+    return res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+const getSellerProducts = async (req, res) => {
+  try {
+    let { page = 1, limit = 10 } = req.query;
+
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const [products, total] = await Promise.all([
+      productModel
+        .find({ seller: req.user.id })
+        .skip(skip)
+        .limit(limit),
+      productModel.countDocuments({ seller: req.user.id }),
+    ]);
+
+    res.status(200).json({
+      products,
+      pagination: {
+        page,
+        limit,
+        total,
+      },
+    });
+  } catch (error) {
+    console.error("GET SELLER PRODUCTS ERROR 👉", error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
 
 module.exports = { 
     createProduct,
     getProducts,
     getProductById,
+    updateProduct,
+    deleteProduct,
+    getSellerProducts
  };
-
-
 
 
 
