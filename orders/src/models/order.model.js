@@ -56,8 +56,10 @@ const orderSchema = new mongoose.Schema({
             default:"INR"
         }
     },
-    shippingAddress : addressSchema
-
+    shippingAddress : {
+        type:addressSchema,
+        required:true,
+    }
 
 },{timestamps:true})
 
