@@ -51,6 +51,25 @@ const addToCart = async (req, res) => {
   }
 }
 
+
+const getCart = async (req, res) => {
+  const userId = req.user.id;
+
+  const cart = await cartModel.findOne({ user: userId });
+
+  if (!cart) {
+    return res.status(200).json({
+      items: []
+    });
+  }
+
+  return res.status(200).json({
+    items: cart.items
+  });
+};
+
+
 module.exports = {
-  addToCart
+  addToCart,
+  getCart
 }
