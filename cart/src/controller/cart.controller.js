@@ -68,8 +68,81 @@ const getCart = async (req, res) => {
   });
 };
 
+const updateCartItem = async (req, res) => {
+  const { productId } = req.params;
+  const { quantity } = req.body;
+  const userId = req.user.id;
+
+  const cart = await cartModel.findOne({ user: userId });
+
+  if (!cart) {
+    return res.status(404).json({ message: "Cart not found" });
+  }
+
+  const itemIndex = cart.items.findIndex(item =>
+    item.productId.equals(productId)
+  );
+
+  if (itemIndex === -1) {
+    return res.status(404).json({ message: "Item not found" });
+  }
+
+  // remove item
+  if (quantity <= 0) {
+    cart.items.splice(itemIndex, 1);
+  } else {
+    cart.items[itemIndex].quantity = quantity;
+  }
+
+  await cart.save();
+
+  return res.status(200).json({
+    message: "Cart updated"
+  });
+};
+
+const removeCartItem = async (req, res) => {
+  const { productId } = req.params;
+  const userId = req.user.id;
+
+  const cart = await cartModel.findOne({ user: userId });
+
+  if (!cart) {
+    return res.status(404).json({ message: "Cart not found" });
+  }
+
+  const initialLength = cart.items.length;
+
+  cart.items = cart.items.filter(
+    item => !item.productId.equals(productId)
+  );
+
+  if (cart.items.length === initialLength) {
+    return res.status(404).json({ message: "Item not found" });
+  }
+
+  await cart.save();
+
+  return res.status(200).json({
+    message: "Item removed"
+  });
+};
+
+const clearCart = async (req, res) => {
+  const userId = req.user.id;
+
+  await cartModel.deleteOne({ user: userId });
+
+  return res.status(200).json({
+    message: "Cart cleared"
+  });
+};
+
 
 module.exports = {
   addToCart,
-  getCart
+  getCart,
+  updateCartItem,
+  removeCartItem,
+  clearCart
 }
