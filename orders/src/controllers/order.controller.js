@@ -7,6 +7,10 @@ const publishToQueue = async () => Promise.resolve();
 const createOrder = async (req, res) => {
   try {
     const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
     const { shippingAddress } = req.body;
 
     /* 1️⃣ Validate shipping address */
@@ -23,9 +27,9 @@ const createOrder = async (req, res) => {
       });
     }
 
-    /* 2️⃣ Fetch cart from Cart Service */
+    /* 2️⃣ Fetch cart from Cart Service (✅ FIXED) */
     const cartRes = await axios.get(
-      'http://localhost:3002/cart',
+      'http://localhost:3002/api/cart/me',
       {
         headers: {
           Cookie: req.headers.cookie
@@ -53,14 +57,13 @@ const createOrder = async (req, res) => {
           }
         );
 
-        const product = productRes.data.data;
+        const product = productRes.data?.data || productRes.data?.product;
 
         if (product.stock < item.quantity) {
           throw new Error(`Insufficient stock for ${product.title}`);
         }
 
-        const itemTotal = product.price.amount * item.quantity;
-        totalAmount += itemTotal;
+        totalAmount += product.price.amount * item.quantity;
 
         return {
           product: item.productId,
@@ -73,14 +76,14 @@ const createOrder = async (req, res) => {
       })
     );
 
-    /* 4️⃣ Create order (price snapshot) */
+    /* 4️⃣ Create order */
     const order = await orderModel.create({
       user: userId,
       items: orderItems,
       status: 'PENDING',
       totalprice: {
         amount: totalAmount,
-        currency: orderItems[0].price.currency
+        currency: orderItems[0]?.price?.currency || 'INR'
       },
       shippingAddress: {
         street: shippingAddress.street,
@@ -91,17 +94,17 @@ const createOrder = async (req, res) => {
       }
     });
 
-    /* 5️⃣ Emit event (stubbed) */
+    /* 5️⃣ Emit event */
     await publishToQueue('ORDER_CREATED', order);
 
-    /* 6️⃣ Response (test-friendly shape) */
+    /* 6️⃣ Response */
     return res.status(201).json({
       order: {
         _id: order._id,
         user: order.user,
         status: order.status,
         items: order.items,
-        totalPrice: order.totalprice, // alias for test
+        totalPrice: order.totalprice,
         shippingAddress: {
           street: order.shippingAddress.street,
           city: order.shippingAddress.city,
@@ -120,6 +123,4 @@ const createOrder = async (req, res) => {
   }
 };
 
-module.exports = {
-  createOrder
-};
+module.exports = { createOrder };
