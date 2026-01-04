@@ -141,14 +141,41 @@ const getMyOrders = async (req, res) => {
     });
   }
 };
+const getOrderById = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const { id } = req.params;
+
+    const order = await orderModel.findById(id);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const orderUserId =
+      order.user?._id?.toString() ||
+      order.user?.id?.toString() ||
+      order.user?.toString();
+
+    if (orderUserId !== userId.toString()) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    return res.status(200).json({ order });
+
+  } catch (err) {
+    return res.status(500).json({
+      message: 'Internal server error',
+      error: err.message
+    });
+  }
+};
 
 
 
 module.exports = {
      createOrder,
-     getMyOrders
-
-     
-     
-
+     getMyOrders,
+     getOrderById
+         
     };

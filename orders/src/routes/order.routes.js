@@ -1,8 +1,16 @@
-const { createOrder, getMyOrders } = require('../controllers/order.controller')
-const authMiddleware = require('../middlewares/auth.middleware')
-const  { createOrderValidation, updateAddressValidation } = require('../middlewares/validator.middleware')
-const router = require('express').Router()
+const express = require('express');
+const {
+  createOrder,
+  getMyOrders,
+  getOrderById
+} = require('../controllers/order.controller');
 
-router.post('/',authMiddleware,createOrderValidation,createOrder)
+const authMiddleware = require('../middlewares/auth.middleware');
+
+const router = express.Router();
+
+router.post('/', authMiddleware, createOrder);
 router.get('/me', authMiddleware, getMyOrders);
-module.exports = router
+router.get('/:id', authMiddleware, getOrderById);
+
+module.exports = router;

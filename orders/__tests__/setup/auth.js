@@ -2,8 +2,10 @@ const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 
 const getAuthCookie = () => {
+  const userId = new mongoose.Types.ObjectId().toHexString();
+
   const payload = {
-    id: new mongoose.Types.ObjectId().toHexString(),
+    id: userId,
     role: "user"
   };
 
@@ -12,8 +14,13 @@ const getAuthCookie = () => {
     process.env.JWT_SECRET || "testsecret"
   );
 
-  // supertest expects array of cookies
-  return [`token=${token}`];
+  // ✅ BACKWARD COMPATIBLE
+  const cookie = [`token=${token}`];
+
+  // attach userId for tests that need ownership
+  cookie.userId = userId;
+
+  return cookie;
 };
 
 module.exports = { getAuthCookie };
