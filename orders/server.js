@@ -1,10 +1,10 @@
-require('dotenv').config()
-const app = require('./src/app')
-const connectToDb = require('./src/db/db')
 
+require('dotenv').config();
+const app = require('./app');
+const connectToDb = require('./db/db');
 
-connectToDb()
+connectToDb();
 
-app.listen(3003,()=>{
-    console.log("Order service is running on port 3003")
-})
+app.listen(3003, () => {
+  console.log('Order service is running on port 3003');
+});

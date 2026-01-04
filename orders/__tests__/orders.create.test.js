@@ -1,6 +1,47 @@
 const request = require('supertest');
-const app = require('../../src/app');
-const { getAuthCookie } = require('../setup/auth');
+const app = require('../src/app');
+const { getAuthCookie } = require('./setup/auth');
+const axios = require('axios');
+jest.mock('axios');
+
+beforeEach(() => {
+  axios.get.mockImplementation((url) => {
+    // Cart service mock
+    if (url.includes('/api/cart/me')) {
+      return Promise.resolve({
+        data: {
+          cart: {
+            items: [
+              {
+                productId: '65a1234567890abcdef1234',
+                quantity: 2
+              }
+            ]
+          }
+        }
+      });
+    }
+
+    // Product service mock
+    if (url.includes('/products/')) {
+      return Promise.resolve({
+        data: {
+          data: {
+            _id: '65a1234567890abcdef1234',
+            title: 'Test Product',
+            stock: 10,
+            price: {
+              amount: 500,
+              currency: 'INR'
+            }
+          }
+        }
+      });
+    }
+
+    return Promise.reject(new Error('Unknown GET ' + url));
+  });
+});
 
 
 describe('POST /api/orders — Create order from current cart', () => {

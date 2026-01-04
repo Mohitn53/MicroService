@@ -1,12 +1,12 @@
-const cookieParser = require('cookie-parser')
-const express = require('express')
-const orderRoutes = require('../src/routes/order.routes')
-const app = express()
+const cookieParser = require('cookie-parser');
+const express = require('express');
+const orderRoutes = require('./routes/order.routes');
 
-app.use(express.json())
-app.use(cookieParser)
+const app = express();
 
-app.use('/orders',orderRoutes)
+app.use(express.json());
+app.use(cookieParser()); // ✅ FIXED
 
+app.use('/api/orders', orderRoutes); // ✅ FIXED
 
-module.exports = app
+module.exports = app;
