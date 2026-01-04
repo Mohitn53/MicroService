@@ -170,12 +170,58 @@ const getOrderById = async (req, res) => {
     });
   }
 };
+const cancelOrder = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const { id } = req.params;
 
+    const order = await orderModel.findById(id);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const orderUserId =
+      order.user?._id?.toString() ||
+      order.user?.id?.toString() ||
+      order.user?.toString();
+
+    // 🔐 Ownership check
+    if (orderUserId !== userId.toString()) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    // ❌ Cannot cancel shipped/delivered orders
+    if (['SHIPPED', 'DELIVERED'].includes(order.status)) {
+      return res.status(400).json({
+        message: `Order cannot be cancelled once ${order.status}`
+      });
+    }
+
+    // ✅ Cancel order
+    order.status = 'CANCELLED';
+    await order.save();
+
+    // 🔔 Emit event (future inventory rollback)
+    await publishToQueue('ORDER_CANCELLED', order);
+
+    return res.status(200).json({
+      message: 'Order cancelled successfully',
+      order
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      message: 'Internal server error',
+      error: err.message
+    });
+  }
+};
 
 
 module.exports = {
      createOrder,
      getMyOrders,
-     getOrderById
-         
+     getOrderById,
+     cancelOrder         
     };
