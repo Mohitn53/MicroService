@@ -122,5 +122,33 @@ const createOrder = async (req, res) => {
     });
   }
 };
+const getMyOrders = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
 
-module.exports = { createOrder };
+    const orders = await orderModel
+      .find({ user: userId })
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({ orders });
+  } catch (err) {
+    return res.status(500).json({
+      message: 'Internal server error',
+      error: err.message
+    });
+  }
+};
+
+
+
+module.exports = {
+     createOrder,
+     getMyOrders
+
+     
+     
+
+    };
