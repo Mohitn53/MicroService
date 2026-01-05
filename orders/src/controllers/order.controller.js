@@ -283,7 +283,66 @@ const updateOrderAddress = async (req, res) => {
     });
   }
 };
+const getSellerOrders = async (req, res) => {
+  try {
+    const sellerId = req.user._id || req.user.id;
 
+    // 🔐 Only sellers allowed
+    if (req.user.role !== 'seller' && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    /**
+     * Assumption:
+     * order.items = [
+     *   {
+     *     product,
+     *     quantity,
+     *     price,
+     *     seller
+     *   }
+     * ]
+     */
+
+    const orders = await orderModel.find({
+      'items.seller': sellerId
+    });
+
+    // Return only seller-specific items per order
+    const sellerOrders = orders.map(order => {
+      const sellerItems = order.items.filter(
+        item =>
+          item.seller?.toString() === sellerId.toString()
+      );
+
+      return {
+        _id: order._id,
+        status: order.status,
+        createdAt: order.createdAt,
+        items: sellerItems
+      };
+    });
+
+    return res.status(200).json({
+      orders: sellerOrders
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      message: 'Internal server error',
+      error: err.message
+    });
+  }
+};
+
+module.exports = {
+  createOrder,
+  getMyOrders,
+  getOrderById,
+  cancelOrder,
+  updateOrderAddress,
+  getSellerOrders
+};
 
 
 
