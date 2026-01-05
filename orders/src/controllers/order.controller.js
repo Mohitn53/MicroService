@@ -4,6 +4,9 @@ const axios = require('axios');
 // TEMP stub — replace later with RabbitMQ / Kafka
 const publishToQueue = async () => Promise.resolve();
 
+/* =========================
+   CREATE ORDER
+========================= */
 const createOrder = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -13,7 +16,6 @@ const createOrder = async (req, res) => {
 
     const { shippingAddress } = req.body;
 
-    /* 1️⃣ Validate shipping address */
     if (
       !shippingAddress ||
       !shippingAddress.street ||
@@ -27,34 +29,25 @@ const createOrder = async (req, res) => {
       });
     }
 
-    /* 2️⃣ Fetch cart from Cart Service (✅ FIXED) */
     const cartRes = await axios.get(
       'http://localhost:3002/api/cart/me',
       {
-        headers: {
-          Cookie: req.headers.cookie
-        }
+        headers: { Cookie: req.headers.cookie }
       }
     );
 
     const cartItems = cartRes.data?.cart?.items;
-
     if (!cartItems || cartItems.length === 0) {
       return res.status(400).json({ message: 'Cart is empty' });
     }
 
-    /* 3️⃣ Fetch products + compute totals */
     let totalAmount = 0;
 
     const orderItems = await Promise.all(
       cartItems.map(async (item) => {
         const productRes = await axios.get(
           `http://localhost:3001/products/${item.productId}`,
-          {
-            headers: {
-              Cookie: req.headers.cookie
-            }
-          }
+          { headers: { Cookie: req.headers.cookie } }
         );
 
         const product = productRes.data?.data || productRes.data?.product;
@@ -76,7 +69,6 @@ const createOrder = async (req, res) => {
       })
     );
 
-    /* 4️⃣ Create order */
     const order = await orderModel.create({
       user: userId,
       items: orderItems,
@@ -94,10 +86,8 @@ const createOrder = async (req, res) => {
       }
     });
 
-    /* 5️⃣ Emit event */
     await publishToQueue('ORDER_CREATED', order);
 
-    /* 6️⃣ Response */
     return res.status(201).json({
       order: {
         _id: order._id,
@@ -122,6 +112,10 @@ const createOrder = async (req, res) => {
     });
   }
 };
+
+/* =========================
+   GET MY ORDERS
+========================= */
 const getMyOrders = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -141,13 +135,16 @@ const getMyOrders = async (req, res) => {
     });
   }
 };
+
+/* =========================
+   GET ORDER BY ID
+========================= */
 const getOrderById = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
     const { id } = req.params;
 
     const order = await orderModel.findById(id);
-
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -162,7 +159,6 @@ const getOrderById = async (req, res) => {
     }
 
     return res.status(200).json({ order });
-
   } catch (err) {
     return res.status(500).json({
       message: 'Internal server error',
@@ -170,13 +166,16 @@ const getOrderById = async (req, res) => {
     });
   }
 };
+
+/* =========================
+   CANCEL ORDER
+========================= */
 const cancelOrder = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
     const { id } = req.params;
 
     const order = await orderModel.findById(id);
-
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -186,30 +185,25 @@ const cancelOrder = async (req, res) => {
       order.user?.id?.toString() ||
       order.user?.toString();
 
-    // 🔐 Ownership check
     if (orderUserId !== userId.toString()) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    // ❌ Cannot cancel shipped/delivered orders
     if (['SHIPPED', 'DELIVERED'].includes(order.status)) {
       return res.status(400).json({
         message: `Order cannot be cancelled once ${order.status}`
       });
     }
 
-    // ✅ Cancel order
     order.status = 'CANCELLED';
     await order.save();
 
-    // 🔔 Emit event (future inventory rollback)
     await publishToQueue('ORDER_CANCELLED', order);
 
     return res.status(200).json({
       message: 'Order cancelled successfully',
       order
     });
-
   } catch (err) {
     return res.status(500).json({
       message: 'Internal server error',
@@ -217,13 +211,16 @@ const cancelOrder = async (req, res) => {
     });
   }
 };
+
+/* =========================
+   UPDATE ORDER ADDRESS
+========================= */
 const updateOrderAddress = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
     const { id } = req.params;
     const { shippingAddress } = req.body;
 
-    // ✅ Validate address
     if (
       !shippingAddress ||
       !shippingAddress.street ||
@@ -238,7 +235,6 @@ const updateOrderAddress = async (req, res) => {
     }
 
     const order = await orderModel.findById(id);
-
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -248,19 +244,16 @@ const updateOrderAddress = async (req, res) => {
       order.user?.id?.toString() ||
       order.user?.toString();
 
-    // 🔐 Ownership check
     if (orderUserId !== userId.toString()) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    // ❌ Cannot update address after shipping
     if (['SHIPPED', 'DELIVERED'].includes(order.status)) {
       return res.status(400).json({
         message: `Cannot update address once order is ${order.status}`
       });
     }
 
-    // ✅ Update address
     order.shippingAddress = {
       street: shippingAddress.street,
       city: shippingAddress.city,
@@ -275,7 +268,6 @@ const updateOrderAddress = async (req, res) => {
       message: 'Shipping address updated successfully',
       order
     });
-
   } catch (err) {
     return res.status(500).json({
       message: 'Internal server error',
@@ -283,50 +275,30 @@ const updateOrderAddress = async (req, res) => {
     });
   }
 };
+
+/* =========================
+   GET SELLER ORDERS
+========================= */
 const getSellerOrders = async (req, res) => {
   try {
-    const sellerId = req.user._id || req.user.id;
-
-    // 🔐 Only sellers allowed
-    if (req.user.role !== 'seller' && req.user.role !== 'admin') {
+    if (req.user.role !== 'seller') {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    /**
-     * Assumption:
-     * order.items = [
-     *   {
-     *     product,
-     *     quantity,
-     *     price,
-     *     seller
-     *   }
-     * ]
-     */
+    const sellerId = req.user.id;
 
     const orders = await orderModel.find({
       'items.seller': sellerId
     });
 
-    // Return only seller-specific items per order
-    const sellerOrders = orders.map(order => {
-      const sellerItems = order.items.filter(
-        item =>
-          item.seller?.toString() === sellerId.toString()
-      );
+    const filteredOrders = orders.map(order => ({
+      ...order,
+      items: order.items.filter(
+        item => item.seller?.toString() === sellerId
+      )
+    }));
 
-      return {
-        _id: order._id,
-        status: order.status,
-        createdAt: order.createdAt,
-        items: sellerItems
-      };
-    });
-
-    return res.status(200).json({
-      orders: sellerOrders
-    });
-
+    return res.status(200).json({ orders: filteredOrders });
   } catch (err) {
     return res.status(500).json({
       message: 'Internal server error',
@@ -335,6 +307,9 @@ const getSellerOrders = async (req, res) => {
   }
 };
 
+/* =========================
+   EXPORTS (ONLY ONCE)
+========================= */
 module.exports = {
   createOrder,
   getMyOrders,
@@ -343,16 +318,3 @@ module.exports = {
   updateOrderAddress,
   getSellerOrders
 };
-
-
-
-
-
-
-module.exports = {
-     createOrder,
-     getMyOrders,
-     getOrderById,
-     cancelOrder,
-     updateOrderAddress         
-    };
