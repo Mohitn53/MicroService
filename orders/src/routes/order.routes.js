@@ -3,7 +3,8 @@ const {
   createOrder,
   getMyOrders,
   getOrderById,
-  cancelOrder
+  cancelOrder,
+  updateOrderAddress
 } = require('../controllers/order.controller');
 
 const authMiddleware = require('../middlewares/auth.middleware');
@@ -14,5 +15,6 @@ router.post('/', authMiddleware, createOrder);
 router.get('/me', authMiddleware, getMyOrders);
 router.get('/:id', authMiddleware, getOrderById);
 router.patch('/:id/cancel', authMiddleware, cancelOrder);
+router.patch('/:id/address', authMiddleware, updateOrderAddress);
 
 module.exports = router;

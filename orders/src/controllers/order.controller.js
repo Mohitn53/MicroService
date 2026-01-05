@@ -217,11 +217,83 @@ const cancelOrder = async (req, res) => {
     });
   }
 };
+const updateOrderAddress = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const { id } = req.params;
+    const { shippingAddress } = req.body;
+
+    // ✅ Validate address
+    if (
+      !shippingAddress ||
+      !shippingAddress.street ||
+      !shippingAddress.city ||
+      !shippingAddress.state ||
+      !shippingAddress.pincode ||
+      !shippingAddress.country
+    ) {
+      return res.status(400).json({
+        message: 'Invalid or missing shipping address'
+      });
+    }
+
+    const order = await orderModel.findById(id);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const orderUserId =
+      order.user?._id?.toString() ||
+      order.user?.id?.toString() ||
+      order.user?.toString();
+
+    // 🔐 Ownership check
+    if (orderUserId !== userId.toString()) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    // ❌ Cannot update address after shipping
+    if (['SHIPPED', 'DELIVERED'].includes(order.status)) {
+      return res.status(400).json({
+        message: `Cannot update address once order is ${order.status}`
+      });
+    }
+
+    // ✅ Update address
+    order.shippingAddress = {
+      street: shippingAddress.street,
+      city: shippingAddress.city,
+      state: shippingAddress.state,
+      zipcode: shippingAddress.pincode,
+      country: shippingAddress.country
+    };
+
+    await order.save();
+
+    return res.status(200).json({
+      message: 'Shipping address updated successfully',
+      order
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      message: 'Internal server error',
+      error: err.message
+    });
+  }
+};
+
+
+
+
+
 
 
 module.exports = {
      createOrder,
      getMyOrders,
      getOrderById,
-     cancelOrder         
+     cancelOrder,
+     updateOrderAddress         
     };
